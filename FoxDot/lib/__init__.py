@@ -159,6 +159,66 @@ def soloBeats_group(self,n=8, end=False):
     
     Clock.schedule(self.solo, Clock.now())
     
+@player_method
+def _drop(self, players, build_up=4,hold=2,end=True):
+    # you supply the player/group to play afterwards (otherwise its all)
+    #  you calculate the  current dur length 
+    # you calculate the  buildup and its length
+    ## at next _bar reset the clock so everything then works in time 
+    # you  solo the player / PGroup for the buildup and hold
+    # restart everything in the afterwards group
+    # reset the dur if you need to
+    #  player  def pause(self): &   def play(self):
+
+    # TODO : can you clone and start a player then kill it then the solo deal with it. 
+    old_dur = P[self.rhythm()]
+    reset_dur = P[self.rhythm()]
+    # TODO : if sum(old_dur) < bar get it up to a bar instead 
+    if sum(old_dur) < Clock.bar_length():
+        old_dur = reset_dur.duplicate(int(Clock.bar_length() / sum(old_dur) ))
+
+    build_durs = old_dur._buildup(build_up)
+    hold_durs = old_dur._hold(build_up, hold)
+    
+    #Clock.set_time(0)
+    #print("Clock.now()",Clock.now())
+    
+    buildupStart = Clock.next_bar()
+    soloStart = buildupStart + sum(build_durs)
+    soloEnd = soloStart + sum(hold_durs)
+    
+    #print("drop old_dur", old_dur, "build_durs", build_durs, "hold_durs", hold_durs)
+    #print("soloStart", soloStart, "soloEnd", soloEnd)
+
+    new_durs = build_durs | hold_durs
+    #print("new_durs", new_durs)
+    
+    Clock.schedule(lambda : setattr(self, "dur", new_durs), buildupStart)
+
+    # TODO : these can be groups that could have a single amp.    
+    for player in players:
+        current_amp = getattr(player, "amp")
+        if current_amp == 0 :
+            current_amp = 1
+        Clock.schedule(lambda : setattr(player, "amp", 0), soloStart)
+        Clock.schedule(lambda : setattr(player, "amp", current_amp), soloEnd)
+
+    Clock.schedule(self.solo, soloStart)
+    Clock.schedule(self.metro.solo.reset, soloEnd)
+    if(end):
+        Clock.schedule(self.stop, soloEnd)
+    Clock.schedule(lambda : setattr(self, "dur", reset_dur), soloEnd)
+    
+@player_method
+def drop(self, build_up=4,hold=2,end=True, player=None, players=[]):
+    # new drop idea 
+    # apply it to a player or group
+    if player:
+        players.append(player)
+    
+    Clock.schedule(lambda : self._drop(players, build_up, hold, end), Clock.next_bar() )
+    
+
 
 def update_foxdot_clock(clock):
     """ Tells the TimeVar, Player, and MidiIn classes to use

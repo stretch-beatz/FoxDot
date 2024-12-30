@@ -916,6 +916,39 @@ class metaPattern(object):
             new.append(self[i])
             i+=1
         return self.new(new)
+    
+    @loop_pattern_method
+    def doubletime(self):
+        return (self | self) / 2
+    
+    @loop_pattern_method
+    def _buildup(self, n=4):
+        """ Repeats this pattern n times but doubling the speed each time (and keeping the length) and holds for more repeats, keep nested pattern values """
+        new = Pattern()
+        j = self
+        for i in range(n):
+            j = j.doubletime()
+            new = new | j
+        return new
+    
+    @loop_pattern_method
+    def _hold(self, n=4, hold=0):
+        """ Repeats this pattern n times but doubling the speed each time (and keeping the length) and holds for more repeats, keep nested pattern values """
+        new = Pattern()
+        j = self
+        for i in range(n):
+            j = j.doubletime()
+        for h in range(hold):
+            new = new | j
+        return new
+
+    @loop_pattern_method
+    def buildup(self, n=4, hold = 0 ):
+        """ Repeats this pattern n times but doubling the speed each time (and keeping the length) and holds for more repeats, keep nested pattern values """
+        new = Pattern()
+        new = new | self._buildup(n) | self._hold(n, hold)
+        print("buildup", sum(self), sum(new))
+        return new
 
     # Methods that take a non number / pattern argument
 
